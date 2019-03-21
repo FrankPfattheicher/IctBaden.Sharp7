@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.489
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IctBaden.Sharp7", "IctBaden.Sharp7\IctBaden.Sharp7.csproj", "{0B3C218C-CB0F-49CF-B2DA-890BDD0E0384}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IctBaden.Framework", "..\IctBaden.Framework\IctBaden.Framework\IctBaden.Framework.csproj", "{39536972-B3B2-48C7-85D2-419D91575C61}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0B3C218C-CB0F-49CF-B2DA-890BDD0E0384}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B3C218C-CB0F-49CF-B2DA-890BDD0E0384}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B3C218C-CB0F-49CF-B2DA-890BDD0E0384}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B3C218C-CB0F-49CF-B2DA-890BDD0E0384}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39536972-B3B2-48C7-85D2-419D91575C61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39536972-B3B2-48C7-85D2-419D91575C61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39536972-B3B2-48C7-85D2-419D91575C61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39536972-B3B2-48C7-85D2-419D91575C61}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B49EE29F-1E70-433E-ABAA-062BB1ED6836}
+	EndGlobalSection
+EndGlobal
