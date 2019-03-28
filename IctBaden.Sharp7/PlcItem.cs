@@ -14,9 +14,9 @@ namespace IctBaden.Sharp7
         private readonly S7Client _client;
         private readonly PlcDataInfo _info;
 
-        public PlcItem(S7Client client, PlcDataInfo info)
+        public PlcItem(PlcConnection connection, PlcDataInfo info)
         {
-            _client = client;
+            _client = connection.PlcClient;
             _info = info;
         }
 
@@ -27,7 +27,7 @@ namespace IctBaden.Sharp7
                                 || (_info.PlcDataType == PlcDataTypes.DINT)
                                 || (_info.PlcDataType == PlcDataTypes.INT);
 
-        private object _value;
+        private object _value = 0;
         private object _oldValue;
 
         public event Action<PlcItem> ValueChanged;
@@ -114,7 +114,7 @@ namespace IctBaden.Sharp7
             if (!_client.Connected) return false;
 
             var buffer = new byte[_info.Size];
-            _value = value;
+            _value = value ?? throw new ArgumentNullException(nameof(value));
 
             switch (_info.PlcDataType)
             {
@@ -138,14 +138,12 @@ namespace IctBaden.Sharp7
                     break;
             }
 
-            var result = _client.DBWrite(_info.DbNumber, _info.Offset, _info.Size, buffer);
-            if (result != 0)
-            {
-                TronTrace.TraceError($"PlcItem.DBWrite({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
-                return false;
-            }
+            var result = _client.WriteArea(_info.PlcArea, _info.DbNumber, _info.Offset, _info.Size, _info.PlcWordLen, buffer);
+            if (result == 0) return true;
 
-            return true;
+            TronTrace.TraceError($"PlcItem.DBWrite({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
+            return false;
+
         }
 
         public bool ValueBool

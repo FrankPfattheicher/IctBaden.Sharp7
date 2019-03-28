@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using IctBaden.Framework.Tron;
 using Sharp7;
+// ReSharper disable UnusedMember.Global
 
 namespace IctBaden.Sharp7
 {
@@ -12,12 +13,12 @@ namespace IctBaden.Sharp7
         public string PlcAddress { get; set; }
         public int PlcPollIntervalMilliseconds { get; set; }
 
+        internal S7Client PlcClient { get; private set; }
+
         public List<PlcItem> ItemsToPoll { get; set; }
 
         public event Action<PlcItem> ItemChanged;
 
-
-        private S7Client _plcClient;
         private bool _oldPlcConnected;
 
         private Timer _poll;
@@ -37,9 +38,9 @@ namespace IctBaden.Sharp7
 
         public void Start()
         {
-            _plcClient = new S7Client();
+            PlcClient = new S7Client();
             TronTrace.TraceInformation("PlcConnection: Connect to " + PlcAddress);
-            _plcClient.ConnectTo(PlcAddress, 0, 2);
+            PlcClient.ConnectTo(PlcAddress, 0, 2);
 
             if(PlcPollIntervalMilliseconds > 0)
             {
@@ -55,8 +56,8 @@ namespace IctBaden.Sharp7
             _poll?.Dispose();
             _poll = null;
 
-            _plcClient?.Disconnect();
-            _plcClient = null;
+            PlcClient?.Disconnect();
+            PlcClient = null;
         }
 
 
@@ -81,10 +82,10 @@ namespace IctBaden.Sharp7
 
         private void DoPollPlc()
         {
-            if (_plcClient.Connected != _oldPlcConnected)
+            if (PlcClient.Connected != _oldPlcConnected)
             {
-                TronTrace.TraceInformation("PlcConnection: Connected = " + _plcClient.Connected);
-                _oldPlcConnected = _plcClient.Connected;
+                TronTrace.TraceInformation("PlcConnection: Connected = " + PlcClient.Connected);
+                _oldPlcConnected = PlcClient.Connected;
             }
 
             foreach (var plcItem in ItemsToPoll)

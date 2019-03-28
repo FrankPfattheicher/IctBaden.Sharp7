@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using Sharp7;
 
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
@@ -11,6 +12,9 @@ namespace IctBaden.Sharp7
     {
         public string Name { get; private set; }
         public string ItemId { get; private set; }
+
+        public int PlcArea { get; private set; }
+        public int PlcWordLen { get; private set; }
 
         public int DbNumber { get; private set; }
         public int Offset { get; private set; }
@@ -41,6 +45,7 @@ namespace IctBaden.Sharp7
                 throw new ArgumentException("Unable to parse item id " + ItemId);
             }
 
+            PlcArea = S7Consts.S7AreaDB;
             DbNumber = int.Parse(parsed.Groups[1].Value);
             Offset = int.Parse(parsed.Groups[3].Value);
 
@@ -57,18 +62,23 @@ namespace IctBaden.Sharp7
                 case PlcDataTypes.X:
                     Size = 1;
                     Bit = int.Parse(parsed.Groups[5].Value);
+                    PlcWordLen = S7Consts.S7WLBit;
                     break;
                 case PlcDataTypes.B:
                     Size = 1;
+                    PlcWordLen = S7Consts.S7WLByte;
                     break;
                 case PlcDataTypes.INT:
                     Size = 2;
+                    PlcWordLen = S7Consts.S7WLInt;
                     break;
                 case PlcDataTypes.DINT:
                     Size = 4;
+                    PlcWordLen = S7Consts.S7WLDInt;
                     break;
                 case PlcDataTypes.DT:
                     Size = 8;
+                    PlcWordLen = S7Consts.S7WLTimer;
                     break;
                 case PlcDataTypes.STRING:
                     Size = int.Parse(parsed.Groups[5].Value);
