@@ -11,55 +11,80 @@ namespace IctBaden.Sharp7
     public class PlcConnection : IDisposable
     {
         public string PlcAddress { get; set; }
+        public int PlcRack { get; set; }
+        public int PlcSlot { get; set; }
         public int PlcPollIntervalMilliseconds { get; set; }
 
         internal S7Client PlcClient { get; private set; }
+        public bool IsConnected => PlcClient?.Connected ?? false;
 
-        public List<PlcItem> ItemsToPoll { get; set; }
-
-        public event Action<PlcItem> ItemChanged;
+        //public event Action<PlcItem> ItemChanged;
 
         private bool _oldPlcConnected;
 
-        private Timer _poll;
+        private List<PlcItem> _pollItems;
+        private Timer _pollTimer;
         private bool _pollActive;
 
+        public static PlcConnection GetS7_300Connection(string plcAddress) =>
+            new PlcConnection(plcAddress, 0, 2);
+        public static PlcConnection GetS7_1200Connection(string plcAddress) =>
+            new PlcConnection(plcAddress, 0, 0);
+        public static PlcConnection GetS7_1500Connection(string plcAddress) =>
+            new PlcConnection(plcAddress, 0, 0);
 
-        public PlcConnection(string plcAddress)
-            : this(plcAddress, 0)
-        {
-        }
-        public PlcConnection(string plcAddress, int plcPollIntervalMilliseconds)
+        public PlcConnection(string plcAddress, int rack, int slot)
         {
             PlcAddress = plcAddress;
-            PlcPollIntervalMilliseconds = plcPollIntervalMilliseconds;
-            ItemsToPoll = new List<PlcItem>();
+            PlcRack = rack;
+            PlcSlot = slot;
         }
 
-        public void Start()
+        public bool Connect()
         {
             PlcClient = new S7Client();
             TronTrace.TraceInformation("PlcConnection: Connect to " + PlcAddress);
-            PlcClient.ConnectTo(PlcAddress, 0, 2);
-
-            if(PlcPollIntervalMilliseconds > 0)
+            PlcClient.ConnectTo(PlcAddress, PlcRack, PlcSlot);
+            if (PlcClient._LastError != 0)
             {
-                TronTrace.TraceInformation($"PlcConnection: Start polling using {PlcPollIntervalMilliseconds}ms interval");
-                _poll = new Timer(_ => PollPlc(), this, 
-                    TimeSpan.FromMilliseconds(PlcPollIntervalMilliseconds),
-                    TimeSpan.FromMilliseconds(PlcPollIntervalMilliseconds));
+                var text = PlcResult.GetResultText(PlcClient._LastError);
+                TronTrace.TraceError("PlcConnection: Connect FAILED : " + text);
             }
+            return IsConnected;
         }
 
-        public void Dispose()
+        public void Disconnect()
         {
-            _poll?.Dispose();
-            _poll = null;
-
             PlcClient?.Disconnect();
             PlcClient = null;
         }
 
+        public void Dispose()
+        {
+            _pollTimer?.Dispose();
+            _pollTimer = null;
+
+            Disconnect();
+        }
+
+        public void StartPolling(List<PlcItem> items)
+        {
+            StartPolling(items, PlcPollIntervalMilliseconds);
+        }
+
+        public void StartPolling(List<PlcItem> items, int plcPollIntervalMilliseconds)
+        {
+            _pollItems = items;
+            PlcPollIntervalMilliseconds = plcPollIntervalMilliseconds;
+
+            if (PlcPollIntervalMilliseconds > 0)
+            {
+                TronTrace.TraceInformation($"PlcConnection: Start polling using {PlcPollIntervalMilliseconds}ms interval");
+                _pollTimer = new Timer(_ => PollPlc(), this,
+                    TimeSpan.FromMilliseconds(PlcPollIntervalMilliseconds),
+                    TimeSpan.FromMilliseconds(PlcPollIntervalMilliseconds));
+            }
+        }
 
         private void PollPlc()
         {
@@ -88,11 +113,9 @@ namespace IctBaden.Sharp7
                 _oldPlcConnected = PlcClient.Connected;
             }
 
-            foreach (var plcItem in ItemsToPoll)
+            foreach (var plcItem in _pollItems)
             {
-                
                 plcItem.UpdateValueFromPlc();
-
             }
         }
 

@@ -11,19 +11,21 @@ namespace IctBaden.Sharp7
 {
     public class PlcItem
     {
-        private readonly S7Client _client;
+        private readonly PlcConnection _connection;
         private readonly PlcDataInfo _info;
 
         public PlcItem(PlcConnection connection, PlcDataInfo info)
         {
-            _client = connection.PlcClient;
+            _connection = connection;
             _info = info;
         }
+
+        public string Name => _info.Name;
 
         // ReSharper disable once InconsistentlySynchronizedField
         public bool IsBoolean => _info.PlcDataType == PlcDataTypes.X;
         public bool IsString => _info.PlcDataType == PlcDataTypes.STRING;
-        public bool IsNumeric => (_info.PlcDataType == PlcDataTypes.B) 
+        public bool IsNumeric => (_info.PlcDataType == PlcDataTypes.B)
                                 || (_info.PlcDataType == PlcDataTypes.DINT)
                                 || (_info.PlcDataType == PlcDataTypes.INT);
 
@@ -32,17 +34,26 @@ namespace IctBaden.Sharp7
 
         public event Action<PlcItem> ValueChanged;
 
+        public override string ToString()
+        {
+            return $"{Name}";
+        }
+
+
         public void UpdateValueFromPlc()
         {
-            lock (_client)
+            var client = _connection?.PlcClient;
+            if (client == null) return;
+
+            lock (_connection.PlcClient)
             {
                 var retry = 3;
                 while (retry-- >= 0)
                 {
-                    if (!_client.Connected)
+                    if (!client.Connected)
                     {
                         TronTrace.TraceWarning("PLC connection lost");
-                        _client.Connect();
+                        client.Connect();
                     }
 
                     if (ReadValue()) return;
@@ -52,8 +63,11 @@ namespace IctBaden.Sharp7
         }
         private bool ReadValue()
         {
+            var client = _connection?.PlcClient;
+            if (client == null) return false;
+
             var buffer = new byte[Math.Max(64, _info.Size)];
-            var result = _client.DBRead(_info.DbNumber, _info.Offset, _info.Size, buffer);
+            var result = client.DBRead(_info.DbNumber, _info.Offset, _info.Size, buffer);
             if (result != 0)
             {
                 TronTrace.TraceError($"PlcItem.DBRead({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
@@ -92,15 +106,18 @@ namespace IctBaden.Sharp7
 
         private void UpdatePlc(object value)
         {
-            lock (_client)
+            var client = _connection?.PlcClient;
+            if (client == null) return;
+
+            lock (client)
             {
                 var retry = 3;
                 while (retry-- >= 0)
                 {
-                    if (!_client.Connected)
+                    if (!client.Connected)
                     {
                         TronTrace.TraceWarning("PLC connection lost");
-                        _client.Connect();
+                        client.Connect();
                     }
 
                     if (WriteValue(value)) return;
@@ -111,46 +128,60 @@ namespace IctBaden.Sharp7
 
         private bool WriteValue(object value)
         {
-            if (!_client.Connected) return false;
+            var client = _connection?.PlcClient;
+            if (client == null) return false;
 
-            var buffer = new byte[_info.Size];
+            if (!client.Connected) return false;
+
+            var buffer = new byte[_info.Size + 64];
             _value = value ?? throw new ArgumentNullException(nameof(value));
 
-            switch (_info.PlcDataType)
+            try
             {
-                case PlcDataTypes.X:
-                    S7.SetBitAt(ref buffer, 0, _info.Bit, UniversalConverter.ConvertTo<bool>(_value));
-                    break;
-                case PlcDataTypes.B:
-                    S7.SetByteAt(buffer, 0, UniversalConverter.ConvertTo<byte>(_value));
-                    break;
-                case PlcDataTypes.INT:
-                    S7.SetIntAt(buffer, 0, UniversalConverter.ConvertTo<short>(_value));
-                    break;
-                case PlcDataTypes.DINT:
-                    S7.SetDIntAt(buffer, 0, UniversalConverter.ConvertTo<int>(_value));
-                    break;
-                case PlcDataTypes.DT:
-                    S7.SetDateTimeAt(buffer, 0, UniversalConverter.ConvertTo<DateTime>(_value));
-                    break;
-                case PlcDataTypes.STRING:
-                    S7.SetStringAt(buffer, 0, _info.Size, UniversalConverter.ConvertTo<string>(_value));
-                    break;
+                switch (_info.PlcDataType)
+                {
+                    case PlcDataTypes.X:
+                        S7.SetBitAt(ref buffer, 0, _info.Bit, UniversalConverter.ConvertTo<bool>(_value));
+                        break;
+                    case PlcDataTypes.B:
+                        S7.SetByteAt(buffer, 0, UniversalConverter.ConvertTo<byte>(_value));
+                        break;
+                    case PlcDataTypes.INT:
+                        S7.SetIntAt(buffer, 0, UniversalConverter.ConvertTo<short>(_value));
+                        break;
+                    case PlcDataTypes.DINT:
+                        S7.SetDIntAt(buffer, 0, UniversalConverter.ConvertTo<int>(_value));
+                        break;
+                    case PlcDataTypes.DT:
+                        S7.SetDateTimeAt(buffer, 0, UniversalConverter.ConvertTo<DateTime>(_value));
+                        break;
+                    case PlcDataTypes.STRING:
+                        S7.SetStringAt(buffer, 0, _info.Size, UniversalConverter.ConvertTo<string>(_value));
+                        break;
+                }
+
+                var result = (_info.PlcDataType == PlcDataTypes.X)
+                                    ? client.WriteArea(_info.PlcArea, _info.DbNumber, _info.Offset, _info.Size, _info.PlcWordLen, buffer)
+                                    : client.DBWrite(_info.DbNumber, _info.Offset, _info.Size, buffer);
+                if (result == 0) return true;
+
+                TronTrace.TraceError($"PlcItem.DBWrite({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
             }
-
-            var result = _client.WriteArea(_info.PlcArea, _info.DbNumber, _info.Offset, _info.Size, _info.PlcWordLen, buffer);
-            if (result == 0) return true;
-
-            TronTrace.TraceError($"PlcItem.DBWrite({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
+            catch (Exception ex)
+            {
+                TronTrace.TraceError($"PlcItem.DBWrite({_info.DbNumber}, {_info.Offset}) failed - {ex.Message}");
+            }
             return false;
-
         }
 
         public bool ValueBool
         {
             get
             {
-                lock (_client)
+                var client = _connection?.PlcClient;
+                if (client == null) return false;
+
+                lock (client)
                 {
                     if (IsBoolean)
                     {
@@ -166,7 +197,10 @@ namespace IctBaden.Sharp7
         {
             get
             {
-                lock (_client)
+                var client = _connection?.PlcClient;
+                if (client == null) return 0;
+
+                lock (client)
                 {
                     if (_value == null)
                     {
@@ -186,7 +220,10 @@ namespace IctBaden.Sharp7
         {
             get
             {
-                lock (_client)
+                var client = _connection?.PlcClient;
+                if (client == null) return string.Empty;
+
+                lock (client)
                 {
                     if (_value == null)
                     {
@@ -208,10 +245,13 @@ namespace IctBaden.Sharp7
         {
             get
             {
-                lock (_client)
+                var client = _connection?.PlcClient;
+                if (client == null) return DateTime.MinValue;
+
+                lock (client)
                 {
-                    return _value == null 
-                        ? DateTime.MinValue 
+                    return _value == null
+                        ? DateTime.MinValue
                         : UniversalConverter.ConvertTo<DateTime>(_value);
                 }
             }

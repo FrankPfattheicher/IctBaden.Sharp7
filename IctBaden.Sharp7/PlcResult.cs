@@ -11,6 +11,8 @@ namespace IctBaden.Sharp7
 
         public static string GetResultText(int resultCode)
         {
+            // Sharp7 public string ErrorText(int Error)
+
             var codes = typeof(global::Sharp7.S7Consts)
                 .GetFields(BindingFlags.Public | BindingFlags.Static)
                 .Where(fi => fi.Name.StartsWith("err"));

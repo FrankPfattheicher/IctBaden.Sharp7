@@ -81,7 +81,7 @@ namespace IctBaden.Sharp7
                     PlcWordLen = S7Consts.S7WLTimer;
                     break;
                 case PlcDataTypes.STRING:
-                    Size = int.Parse(parsed.Groups[5].Value);
+                    Size = int.Parse(parsed.Groups[5].Value) + 2;   // length
                     break;
                 default:
                     throw new ArgumentException("Unsupported data type in item id " + ItemId);
