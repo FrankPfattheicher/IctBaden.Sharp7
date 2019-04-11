@@ -52,7 +52,7 @@ namespace IctBaden.Sharp7
                 {
                     if (!client.Connected)
                     {
-                        TronTrace.TraceWarning("PLC connection lost");
+                        TronTrace.TraceWarning("No PLC connection");
                         client.Connect();
                     }
 
@@ -66,7 +66,7 @@ namespace IctBaden.Sharp7
             var client = _connection?.PlcClient;
             if (client == null) return false;
 
-            var buffer = new byte[Math.Max(64, _info.Size)];
+            var buffer = new byte[Math.Max(64, _info.Size + 2)];
             var result = client.DBRead(_info.DbNumber, _info.Offset, _info.Size, buffer);
             if (result != 0)
             {
@@ -116,7 +116,7 @@ namespace IctBaden.Sharp7
                 {
                     if (!client.Connected)
                     {
-                        TronTrace.TraceWarning("PLC connection lost");
+                        TronTrace.TraceWarning("No PLC connection");
                         client.Connect();
                     }
 

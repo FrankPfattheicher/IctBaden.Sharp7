@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Sharp7;
 
@@ -37,7 +38,7 @@ namespace IctBaden.Sharp7
             // DB12,DINT48
             // DB12,STRING660.10
 
-            //                                1        2       3       4  5
+            //                         1        2       3       4  5
             var parser = new Regex(@"DB([0-9]+),([A-Z]+)([0-9]+)(\.([0-9]+))?");
             var parsed = parser.Match(ItemId);
             if (!parsed.Success)
@@ -57,34 +58,42 @@ namespace IctBaden.Sharp7
 
             PlcDataType = dataType;
 
-            switch (dataType)
+            try
             {
-                case PlcDataTypes.X:
-                    Size = 1;
-                    Bit = int.Parse(parsed.Groups[5].Value);
-                    PlcWordLen = S7Consts.S7WLBit;
-                    break;
-                case PlcDataTypes.B:
-                    Size = 1;
-                    PlcWordLen = S7Consts.S7WLByte;
-                    break;
-                case PlcDataTypes.INT:
-                    Size = 2;
-                    PlcWordLen = S7Consts.S7WLInt;
-                    break;
-                case PlcDataTypes.DINT:
-                    Size = 4;
-                    PlcWordLen = S7Consts.S7WLDInt;
-                    break;
-                case PlcDataTypes.DT:
-                    Size = 8;
-                    PlcWordLen = S7Consts.S7WLTimer;
-                    break;
-                case PlcDataTypes.STRING:
-                    Size = int.Parse(parsed.Groups[5].Value) + 2;   // length
-                    break;
-                default:
-                    throw new ArgumentException("Unsupported data type in item id " + ItemId);
+                switch (dataType)
+                {
+                    case PlcDataTypes.X:
+                        Size = 1;
+                        Bit = int.Parse(parsed.Groups[5].Value);
+                        PlcWordLen = S7Consts.S7WLBit;
+                        break;
+                    case PlcDataTypes.B:
+                        Size = 1;
+                        PlcWordLen = S7Consts.S7WLByte;
+                        break;
+                    case PlcDataTypes.INT:
+                        Size = 2;
+                        PlcWordLen = S7Consts.S7WLInt;
+                        break;
+                    case PlcDataTypes.DINT:
+                        Size = 4;
+                        PlcWordLen = S7Consts.S7WLDInt;
+                        break;
+                    case PlcDataTypes.DT:
+                        Size = 8;
+                        PlcWordLen = S7Consts.S7WLTimer;
+                        break;
+                    case PlcDataTypes.STRING:
+                        Size = int.Parse(parsed.Groups[5].Value) + 2;   // length
+                        break;
+                    default:
+                        throw new ArgumentException("Unsupported data type in item id " + ItemId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"PlcDataInfo.ParseId({Name}) Id={ItemId}: {ex.Message}");
+                throw new ArgumentException("Invalid data type specification in item id " + ItemId);
             }
 
         }
