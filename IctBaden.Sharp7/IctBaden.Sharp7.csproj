@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>net40;netstandard2.0</TargetFrameworks>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <Version>1.0.1</Version>
+    <Company>(C) 2019 ICT Baden GmbH</Company>
   </PropertyGroup>
 
   <ItemGroup>

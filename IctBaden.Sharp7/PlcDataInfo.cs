@@ -19,8 +19,9 @@ namespace IctBaden.Sharp7
 
         public int DbNumber { get; private set; }
         public int Offset { get; private set; }
-        public int Size { get; private set; }
+        public int ByteCount { get; private set; }
         public int Bit { get; private set; }
+        public int MaxStringLength { get; private set; }
         public PlcDataTypes PlcDataType { get; private set; }
 
 
@@ -63,28 +64,29 @@ namespace IctBaden.Sharp7
                 switch (dataType)
                 {
                     case PlcDataTypes.X:
-                        Size = 1;
+                        ByteCount = 1;
                         Bit = int.Parse(parsed.Groups[5].Value);
                         PlcWordLen = S7Consts.S7WLBit;
                         break;
                     case PlcDataTypes.B:
-                        Size = 1;
+                        ByteCount = 1;
                         PlcWordLen = S7Consts.S7WLByte;
                         break;
                     case PlcDataTypes.INT:
-                        Size = 2;
+                        ByteCount = 2;
                         PlcWordLen = S7Consts.S7WLInt;
                         break;
                     case PlcDataTypes.DINT:
-                        Size = 4;
+                        ByteCount = 4;
                         PlcWordLen = S7Consts.S7WLDInt;
                         break;
                     case PlcDataTypes.DT:
-                        Size = 8;
+                        ByteCount = 8;
                         PlcWordLen = S7Consts.S7WLTimer;
                         break;
                     case PlcDataTypes.STRING:
-                        Size = int.Parse(parsed.Groups[5].Value) + 2;   // length
+                        MaxStringLength = int.Parse(parsed.Groups[5].Value);
+                        ByteCount = MaxStringLength + 2;   // [MaxLength] [ActualLength] [chars][chars][chars][chars][chars]...
                         break;
                     default:
                         throw new ArgumentException("Unsupported data type in item id " + ItemId);

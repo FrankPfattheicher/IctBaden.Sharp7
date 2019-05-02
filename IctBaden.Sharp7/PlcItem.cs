@@ -66,8 +66,8 @@ namespace IctBaden.Sharp7
             var client = _connection?.PlcClient;
             if (client == null) return false;
 
-            var buffer = new byte[Math.Max(64, _info.Size + 2)];
-            var result = client.DBRead(_info.DbNumber, _info.Offset, _info.Size, buffer);
+            var buffer = new byte[Math.Max(64, _info.ByteCount + 2)];
+            var result = client.DBRead(_info.DbNumber, _info.Offset, _info.ByteCount, buffer);
             if (result != 0)
             {
                 TronTrace.TraceError($"PlcItem.DBRead({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
@@ -133,7 +133,7 @@ namespace IctBaden.Sharp7
 
             if (!client.Connected) return false;
 
-            var buffer = new byte[_info.Size + 64];
+            var buffer = new byte[_info.ByteCount + 64];
             _value = value ?? throw new ArgumentNullException(nameof(value));
 
             try
@@ -156,13 +156,18 @@ namespace IctBaden.Sharp7
                         S7.SetDateTimeAt(buffer, 0, UniversalConverter.ConvertTo<DateTime>(_value));
                         break;
                     case PlcDataTypes.STRING:
-                        S7.SetStringAt(buffer, 0, _info.Size, UniversalConverter.ConvertTo<string>(_value));
+                        var text = UniversalConverter.ConvertTo<string>(_value);
+                        if (text.Length > _info.MaxStringLength)
+                        {
+                            text = text.Substring(0, _info.MaxStringLength);
+                        }
+                        S7.SetStringAt(buffer, 0, _info.MaxStringLength, text);
                         break;
                 }
 
                 var result = (_info.PlcDataType == PlcDataTypes.X)
-                                    ? client.WriteArea(_info.PlcArea, _info.DbNumber, _info.Offset, _info.Size, _info.PlcWordLen, buffer)
-                                    : client.DBWrite(_info.DbNumber, _info.Offset, _info.Size, buffer);
+                                    ? client.WriteArea(_info.PlcArea, _info.DbNumber, _info.Offset, _info.ByteCount, _info.PlcWordLen, buffer)
+                                    : client.DBWrite(_info.DbNumber, _info.Offset, _info.ByteCount, buffer);
                 if (result == 0) return true;
 
                 TronTrace.TraceError($"PlcItem.DBWrite({_info.DbNumber}, {_info.Offset}) failed - {result} {PlcResult.GetResultText(result)}");
